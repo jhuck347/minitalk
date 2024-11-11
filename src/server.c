@@ -5,47 +5,92 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: jhuck <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/17 18:05:49 by jhuck             #+#    #+#             */
-/*   Updated: 2024/09/17 19:17:48 by jhuck            ###   ########.fr       */
+/*   Created: 2024/10/13 13:25:40 by jhuck             #+#    #+#             */
+/*   Updated: 2024/11/03 22:34:34 by jhuck            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../libs/minitalk.h"
+#include "../inc/minitalk.h"
 
-void	sig_handler(int sig)
+static char	*g_msg = NULL;
+
+void	message_received(void)
 {
-	static int	bit;
-	static int	i;
-
-	if (sig == SIGUSR1)
-		i |= (0x01 << bit);
-	bit++;
-	if (bit == 8)
-	{
-		ft_printf("%c, i");
-		bit = 0;
-		i = 0;
-	}
+	ft_printf("Received: %s\n", g_msg);
+	free(g_msg);
+	g_msg = NULL;
 }
 
-int	main(int argc, char **argv)
+void	concat_char(char c, int msg_size)
 {
-	pid_t	pid;
-		
-	(void)argv;
-	if (argc != 1)
+	char	*new_message;
+
+	new_message = (char *)malloc(sizeof(char) * (msg_size + 2));
+	if (!new_message)
 	{
-		ft_printf("Error: wrong format\n");
-		ft_printf("Try: ./server\n");
+		free(g_msg);
+		exit(1);
+	}
+	if (g_msg)
+	{
+		ft_memcpy(new_message, g_msg, msg_size);
+		free(g_msg);
+	}
+	new_message[msg_size] = c;
+	new_message[msg_size + 1] = '\0';
+	g_msg = new_message;
+}
+
+void	handle_signal(int sig, siginfo_t *info, void *context)
+{
+	static int	size = 0;
+	static int	byte = 0;
+	static int	bit_index = 0;
+
+	if (sig == SIGUSR1)
+		byte |= (1 << bit_index);
+	else if (sig != SIGUSR2)
+		return ;
+	bit_index++;
+	if (bit_index == 8)
+	{
+		concat_char(byte, size++);
+		if (byte == '\0')
+		{
+			size = 0;
+			message_received();
+		}
+		bit_index = 0;
+		byte = 0;
+	}
+	(void)context;
+	if (kill(info->si_pid, SIGUSR1) == -1)
+		ft_putstr_fd("Error on ack", 2);
+}
+
+int	main(void)
+{
+	struct sigaction	sa;
+	pid_t				pid;
+
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_SIGINFO;
+	sa.sa_sigaction = handle_signal;
+	if (sigaction(SIGUSR1, &sa, NULL) == -1
+		|| sigaction(SIGUSR2, &sa, NULL) == -1)
+	{
+		ft_putstr_fd("sigaction error\n", 2);
+		exit(EXIT_FAILURE);
 	}
 	pid = getpid();
 	ft_printf("PID: %d\n", pid);
 	ft_printf("Waiting for a message...\n");
-	while (argc == 1)
-	{
-		signal(SIGUSR1, sig_handler);
-		signal(SIGUSR2, sig_handler); 
+	g_msg = ft_strdup("");
+	if (!g_msg)
+		exit(1);
+	while (1)
 		pause();
-	}
+	if (g_msg)
+		free(g_msg);
 	return (0);
 }

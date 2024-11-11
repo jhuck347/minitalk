@@ -5,50 +5,70 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: jhuck <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/17 18:06:13 by jhuck             #+#    #+#             */
-/*   Updated: 2024/09/17 19:43:38 by jhuck            ###   ########.fr       */
+/*   Created: 2024/10/13 13:25:31 by jhuck             #+#    #+#             */
+/*   Updated: 2024/11/03 22:42:15 by jhuck            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../libs/minitalk.h"
+#include "../inc/minitalk.h"
 
-void	send_bits(pid_t pid, char c)
+static t_msg	g_msg;
+
+static void	send_next_char_bit(pid_t server_pid)
 {
-	int	bit;
+	static int	bit_i = 0;
+	static int	str_i = 0;
+	int			signal;
 
-	bit = 7;
-	while (bit >= 0)
+	if (str_i > g_msg.len)
+		exit(0);
+	if (g_msg.str[str_i] & (1 << bit_i++))
+		signal = SIGUSR1;
+	else
+		signal = SIGUSR2;
+	if (kill(server_pid, signal) == -1)
 	{
-		if ((c & (0x01 << bit)) != 0)
-			kill(pid, SIGUSR1);
-		else
-			kill(pid, SIGUSR2);
-		usleep(100);
-		bit--;
+		ft_printf("Error on send signal %d", signal);
+		exit(EXIT_FAILURE);
+	}
+	if (bit_i == 8)
+	{
+		str_i++;
+		bit_i = 0;
 	}
 }
 
-int	main(int argc, char **argv)
+static void	handle_signal(int sig, siginfo_t *info, void *context)
 {
-	pid_t	pid;
-	char	*msg;
+	if (sig == SIGUSR1)
+		send_next_char_bit(info->si_pid);
+	(void)context;
+}
 
-	if (argc == 3)
-	{
-		pid = ft_atoi(argv[1]);
-		msg = argv[2];
-		while (*msg != '\0')
-		{
-			send_bits(pid, *msg);
-			msg++;
-		}
-		send_bits(pid, '\n');
-	}
-	else
+int	main(int argc, char *argv[])
+{
+	pid_t				server_pid;
+	struct sigaction	sa;
+
+	if (argc != 3)
 	{
 		ft_printf("Error: wrong format\n");
 		ft_printf("Try: ./client <PID> <MESSAGE>\n");
-		return (1);
+		exit(EXIT_FAILURE);
 	}
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_SIGINFO;
+	sa.sa_sigaction = handle_signal;
+	if (sigaction(SIGUSR1, &sa, NULL) == -1)
+	{
+		ft_printf("Error on sigaction with SIGUSR1 signal.\n");
+		exit(EXIT_FAILURE);
+	}
+	server_pid = ft_atoi(argv[1]);
+	g_msg.len = ft_strlen(argv[2]);
+	g_msg.str = argv[2];
+	send_next_char_bit(server_pid);
+	while (1)
+		pause();
 	return (0);
 }
