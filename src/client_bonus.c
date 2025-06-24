@@ -3,62 +3,89 @@
 /*                                                        :::      ::::::::   */
 /*   client_bonus.c                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: jhuck <marvin@42.fr>                       +#+  +:+       +#+        */
+/*   By: marvin <marvin@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/17 18:06:33 by jhuck             #+#    #+#             */
-/*   Updated: 2024/09/17 19:19:02 by jhuck            ###   ########.fr       */
+/*   Created: 2024/10/13 13:25:31 by jhuck             #+#    #+#             */
+/*   Updated: 2025/06/24 22:40:59 by marvin           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../libs/minitalk_bonus.h"
+#include "../inc/minitalk.h"
 
-static void	sig_confirm(int sig)
+static t_msg	g_msg;
+
+static void	send_next_char_bit(pid_t server_pid)
+{
+	static int	bit_i = 0;
+	static int	str_i = 0;
+	int			signal;
+
+	if (str_i > g_msg.len)
+		exit(0);
+	if (g_msg.str[str_i] & (1 << bit_i++))
+		signal = SIGUSR1;
+	else
+		signal = SIGUSR2;
+	if (kill(server_pid, signal) == -1)
+	{
+		ft_printf("Error on send signal %d\n", signal);
+		exit(EXIT_FAILURE);
+	}
+	if (bit_i == 8)
+	{
+		str_i++;
+		bit_i = 0;
+	}
+}
+
+static void	handle_signal(int sig, siginfo_t *info, void *context)
 {
 	if (sig == SIGUSR1)
-		ft_printf("Message received\n");
-	else
-		ft_printf("Message received\n");
+		send_next_char_bit(info->si_pid);
+	(void)context;
 }
 
-void	send_bits(pid_t pid, char c)
+static void	handle_confirmation(int sig)
 {
-	int	bit;
-
-	bit = 0;
-	while (bit < 8)
-	{
-		if ((c & (0x01 << bit)) != 0)
-			kill(pid, SIGUSR1);
-		else
-			kill(pid, SIGUSR2);
-		usleep(100);
-		bit++;
-	}
+	(void)sig;
+	ft_printf("Señal recibida\n");
 }
 
-int	main(int argc, char **argv)
+int	main(int argc, char *argv[])
 {
-	pid_t	pid;
-	char	*msg;
+	pid_t				server_pid;
+	struct sigaction	sa;
+	struct sigaction	sa_ack;
 
-	if (argc == 3)
-	{
-		pid = ft_atoi(argv[1]);
-		msg = argv[2];
-		while (*msg != '\0')
-		{
-			signal(SIGUSR1, sig_confirm);
-			signal(SIGUSR2, sig_confirm);
-			send_bits(pid, *msg);
-			msg++;
-		}
-		send_bits(pid, '\n');
-	}
-	else
+	if (argc != 3)
 	{
 		ft_printf("Error: wrong format\n");
-		ft_printf("Try: ./client <PID> <MESSAGE>\n");
-		return (1);
+		ft_printf("Try: ./client_bonus <PID> <MESSAGE>\n");
+		exit(EXIT_FAILURE);
 	}
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_SIGINFO;
+	sa.sa_sigaction = handle_signal;
+	if (sigaction(SIGUSR1, &sa, NULL) == -1)
+	{
+		ft_printf("Error on sigaction with SIGUSR1 signal.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	sigemptyset(&sa_ack.sa_mask);
+	sa_ack.sa_flags = 0;
+	sa_ack.sa_handler = handle_confirmation;
+	if (sigaction(SIGUSR2, &sa_ack, NULL) == -1)
+	{
+		ft_printf("Error setting up confirmation handler\n");
+		exit(EXIT_FAILURE);
+	}
+
+	server_pid = ft_atoi(argv[1]);
+	g_msg.len = ft_strlen(argv[2]);
+	g_msg.str = argv[2];
+	send_next_char_bit(server_pid);
+	while (1)
+		pause();
 	return (0);
 }

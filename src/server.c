@@ -3,16 +3,25 @@
 /*                                                        :::      ::::::::   */
 /*   server.c                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: jhuck <marvin@42.fr>                       +#+  +:+       +#+        */
+/*   By: marvin <marvin@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/13 13:25:40 by jhuck             #+#    #+#             */
-/*   Updated: 2024/11/03 22:34:34 by jhuck            ###   ########.fr       */
+/*   Updated: 2025/06/24 22:24:28 by marvin           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../inc/minitalk.h"
 
 static char	*g_msg = NULL;
+
+void	store_bit(int sig, int *bit_index, int *byte)
+{
+	if (sig == SIGUSR1)
+		*byte |= (1 << *bit_index);
+	else if (sig != SIGUSR2)
+		return ;
+	(*bit_index)++;
+}
 
 void	message_received(void)
 {
@@ -47,11 +56,7 @@ void	handle_signal(int sig, siginfo_t *info, void *context)
 	static int	byte = 0;
 	static int	bit_index = 0;
 
-	if (sig == SIGUSR1)
-		byte |= (1 << bit_index);
-	else if (sig != SIGUSR2)
-		return ;
-	bit_index++;
+	store_bit(sig, &bit_index, &byte);
 	if (bit_index == 8)
 	{
 		concat_char(byte, size++);
@@ -65,7 +70,7 @@ void	handle_signal(int sig, siginfo_t *info, void *context)
 	}
 	(void)context;
 	if (kill(info->si_pid, SIGUSR1) == -1)
-		ft_putstr_fd("Error on ack", 2);
+		ft_putstr_fd("Error on ack\n", 2);
 }
 
 int	main(void)

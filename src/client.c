@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   client.c                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: jhuck <marvin@42.fr>                       +#+  +:+       +#+        */
+/*   By: marvin <marvin@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/13 13:25:31 by jhuck             #+#    #+#             */
-/*   Updated: 2024/11/03 22:42:15 by jhuck            ###   ########.fr       */
+/*   Updated: 2025/06/24 22:11:04 by marvin           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,17 +18,17 @@ static void	send_next_char_bit(pid_t server_pid)
 {
 	static int	bit_i = 0;
 	static int	str_i = 0;
-	int			signal;
+	int			sig_to_send;
 
 	if (str_i > g_msg.len)
 		exit(0);
 	if (g_msg.str[str_i] & (1 << bit_i++))
-		signal = SIGUSR1;
+		sig_to_send = SIGUSR1;
 	else
-		signal = SIGUSR2;
-	if (kill(server_pid, signal) == -1)
+		sig_to_send = SIGUSR2;
+	if (kill(server_pid, sig_to_send) == -1)
 	{
-		ft_printf("Error on send signal %d", signal);
+		ft_printf("Error on send signal %d\n", sig_to_send);
 		exit(EXIT_FAILURE);
 	}
 	if (bit_i == 8)
