@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   client_bonus.c                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: marvin <marvin@student.42.fr>              +#+  +:+       +#+        */
+/*   By: juhuck <juhuck@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/10/13 13:25:31 by jhuck             #+#    #+#             */
-/*   Updated: 2025/06/24 22:40:59 by marvin           ###   ########.fr       */
+/*   Created: 2025/06/25 17:31:36 by juhuck            #+#    #+#             */
+/*   Updated: 2025/06/25 17:47:58 by juhuck           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,39 +51,36 @@ static void	handle_confirmation(int sig)
 	ft_printf("Señal recibida\n");
 }
 
-int	main(int argc, char *argv[])
+static void	setup_signals(void)
 {
-	pid_t				server_pid;
 	struct sigaction	sa;
 	struct sigaction	sa_ack;
 
-	if (argc != 3)
-	{
-		ft_printf("Error: wrong format\n");
-		ft_printf("Try: ./client_bonus <PID> <MESSAGE>\n");
-		exit(EXIT_FAILURE);
-	}
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_SIGINFO;
 	sa.sa_sigaction = handle_signal;
 	if (sigaction(SIGUSR1, &sa, NULL) == -1)
-	{
-		ft_printf("Error on sigaction with SIGUSR1 signal.\n");
 		exit(EXIT_FAILURE);
-	}
-
 	sigemptyset(&sa_ack.sa_mask);
 	sa_ack.sa_flags = 0;
 	sa_ack.sa_handler = handle_confirmation;
 	if (sigaction(SIGUSR2, &sa_ack, NULL) == -1)
-	{
-		ft_printf("Error setting up confirmation handler\n");
 		exit(EXIT_FAILURE);
-	}
+}
 
-	server_pid = ft_atoi(argv[1]);
-	g_msg.len = ft_strlen(argv[2]);
+int	main(int argc, char **argv)
+{
+	pid_t	server_pid;
+
+	if (argc != 3)
+	{
+		ft_printf("Usage: %s <PID> <MESSAGE>\n", argv[0]);
+		return (1);
+	}
 	g_msg.str = argv[2];
+	g_msg.len = ft_strlen(argv[2]);
+	setup_signals();
+	server_pid = ft_atoi(argv[1]);
 	send_next_char_bit(server_pid);
 	while (1)
 		pause();

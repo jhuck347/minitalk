@@ -3,12 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   minitalk_bonus.h                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: marvin <marvin@student.42.fr>              +#+  +:+       +#+        */
+/*   By: juhuck <juhuck@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/10/13 13:25:21 by jhuck             #+#    #+#             */
-/*   Updated: 2025/06/24 21:47:50 by marvin           ###   ########.fr       */
+/*   Created: 2025/06/25 17:30:24 by juhuck            #+#    #+#             */
+/*   Updated: 2025/06/25 17:30:26 by juhuck           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
+
 
 #ifndef MINITALK_BONUS_H
 # define MINITALK_BONUS_H
